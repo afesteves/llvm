@@ -64,6 +64,7 @@ const char *Triple::getArchTypeName(ArchType Kind) {
   case shave:       return "shave";
   case wasm32:      return "wasm32";
   case wasm64:      return "wasm64";
+  case p3:          return "p3";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -131,6 +132,7 @@ const char *Triple::getArchTypePrefix(ArchType Kind) {
   case shave:       return "shave";
   case wasm32:
   case wasm64:      return "wasm";
+  case p3:          return "p3";
   }
 }
 
@@ -277,6 +279,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("shave", shave)
     .Case("wasm32", wasm32)
     .Case("wasm64", wasm64)
+    .Case("p3", p3)
     .Default(UnknownArch);
 }
 
@@ -386,6 +389,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("shave", Triple::shave)
     .Case("wasm32", Triple::wasm32)
     .Case("wasm64", Triple::wasm64)
+    .Case("p3", Triple::p3)
     .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -586,6 +590,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::msp430:
   case Triple::nvptx:
   case Triple::nvptx64:
+  case Triple::p3:
   case Triple::ppc64le:
   case Triple::r600:
   case Triple::shave:
@@ -1104,6 +1109,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
 
   case llvm::Triple::avr:
   case llvm::Triple::msp430:
+  case llvm::Triple::p3:
     return 16;
 
   case llvm::Triple::arm:
@@ -1177,6 +1183,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::msp430:
   case Triple::systemz:
   case Triple::ppc64le:
+  case Triple::p3:
     T.setArch(UnknownArch);
     break;
 
@@ -1237,6 +1244,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::xcore:
   case Triple::sparcel:
   case Triple::shave:
+  case Triple::p3:
     T.setArch(UnknownArch);
     break;
 
@@ -1297,6 +1305,7 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
+  case Triple::p3:
   case Triple::r600:
   case Triple::shave:
   case Triple::spir64:
@@ -1375,6 +1384,7 @@ Triple Triple::getLittleEndianArchVariant() const {
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
+  case Triple::p3:
   case Triple::ppc64le:
   case Triple::r600:
   case Triple::shave:

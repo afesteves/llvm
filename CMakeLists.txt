@@ -230,6 +230,7 @@ set(LLVM_ALL_TARGETS
   Mips
   MSP430
   NVPTX
+  P3
   PowerPC
   Sparc
   SystemZ

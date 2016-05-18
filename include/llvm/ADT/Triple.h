@@ -59,6 +59,7 @@ public:
     mips64,     // MIPS64: mips64
     mips64el,   // MIPS64EL: mips64el
     msp430,     // MSP430: msp430
+    p3,         // P3
     ppc,        // PPC: powerpc
     ppc64,      // PPC64: powerpc64, ppu
     ppc64le,    // PPC64LE: powerpc64le
