@@ -40,25 +40,19 @@ P3RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const P3FrameLowering *TFI = getFrameLowering(*MF);
   const Function* F = MF->getFunction();
   static const MCPhysReg CalleeSavedRegs[] = {
-    P3::FP, P3::R5, P3::R6, P3::R7,
-    P3::R8, P3::R9, P3::R10, P3::R11,
+    P3::R4, P3::R5, P3::R6, P3::R7,
     0
   };
   static const MCPhysReg CalleeSavedRegsFP[] = {
-    P3::R5, P3::R6, P3::R7,
-    P3::R8, P3::R9, P3::R10, P3::R11,
+    P3::R4, P3::R5, P3::R6, P3::R7,
     0
   };
   static const MCPhysReg CalleeSavedRegsIntr[] = {
-    P3::FP,  P3::R5,  P3::R6,  P3::R7,
-    P3::R8,  P3::R9,  P3::R10, P3::R11,
-    P3::R12, P3::R13, P3::R14, P3::R15,
+    P3::R4, P3::R5, P3::R6, P3::R7,
     0
   };
   static const MCPhysReg CalleeSavedRegsIntrFP[] = {
-    P3::R5,  P3::R6,  P3::R7,
-    P3::R8,  P3::R9,  P3::R10, P3::R11,
-    P3::R12, P3::R13, P3::R14, P3::R15,
+    P3::R4, P3::R5, P3::R6, P3::R7,
     0
   };
 
@@ -68,26 +62,22 @@ P3RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   else
     return (F->getCallingConv() == CallingConv::P3_INTR ?
             CalleeSavedRegsIntr : CalleeSavedRegs);
-
 }
 
 BitVector P3RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const P3FrameLowering *TFI = getFrameLowering(MF);
 
-  // Mark 4 special registers with subregisters as reserved.
-  Reserved.set(P3::PCB);
-  Reserved.set(P3::SPB);
-  Reserved.set(P3::SRB);
-  Reserved.set(P3::CGB);
-  Reserved.set(P3::PC);
+  Reserved.set(P3::RE);
+  Reserved.set(P3::R9);
+  Reserved.set(P3::SD);
+  Reserved.set(P3::EA);
+  Reserved.set(P3::RD);
   Reserved.set(P3::SP);
-  Reserved.set(P3::SR);
-  Reserved.set(P3::CG);
+  Reserved.set(P3::PC);
 
   // Mark frame pointer as reserved if needed.
   if (TFI->hasFP(MF)) {
-    Reserved.set(P3::FPB);
     Reserved.set(P3::FP);
   }
 

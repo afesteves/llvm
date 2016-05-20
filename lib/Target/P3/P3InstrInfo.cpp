@@ -53,10 +53,6 @@ void P3InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     BuildMI(MBB, MI, DL, get(P3::MOV16mr))
       .addFrameIndex(FrameIdx).addImm(0)
       .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
-  else if (RC == &P3::GR8RegClass)
-    BuildMI(MBB, MI, DL, get(P3::MOV8mr))
-      .addFrameIndex(FrameIdx).addImm(0)
-      .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
   else
     llvm_unreachable("Cannot store this register to stack slot!");
 }
@@ -80,10 +76,6 @@ void P3InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     BuildMI(MBB, MI, DL, get(P3::MOV16rm))
       .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
       .addImm(0).addMemOperand(MMO);
-  else if (RC == &P3::GR8RegClass)
-    BuildMI(MBB, MI, DL, get(P3::MOV8rm))
-      .addReg(DestReg, getDefRegState(true)).addFrameIndex(FrameIdx)
-      .addImm(0).addMemOperand(MMO);
   else
     llvm_unreachable("Cannot store this register to stack slot!");
 }
@@ -95,8 +87,6 @@ void P3InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned Opc;
   if (P3::GR16RegClass.contains(DestReg, SrcReg))
     Opc = P3::MOV16rr;
-  else if (P3::GR8RegClass.contains(DestReg, SrcReg))
-    Opc = P3::MOV8rr;
   else
     llvm_unreachable("Impossible reg-to-reg copy");
 
@@ -316,7 +306,6 @@ unsigned P3InstrInfo::GetInstSizeInBytes(const MachineInstr *MI) const {
   case P3II::SizeSpecial:
     switch (MI->getOpcode()) {
     default: llvm_unreachable("Unknown instruction size!");
-    case P3::SAR8r1c:
     case P3::SAR16r1c:
       return 4;
     }

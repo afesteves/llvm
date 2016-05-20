@@ -13,11 +13,7 @@
 // P3 Return Value Calling Convention
 //===----------------------------------------------------------------------===//
 def RetCC_P3 : CallingConv<[
-  // i8 are returned in registers R15B, R14B, R13B, R12B
-  CCIfType<[i8], CCAssignToReg<[R15B, R14B, R13B, R12B]>>,
-
-  // i16 are returned in registers R15, R14, R13, R12
-  CCIfType<[i16], CCAssignToReg<[R15, R14, R13, R12]>>
+  CCIfType<[i16], CCAssignToReg<[R7, R6, R5, R4]>>
 ]>;
 
 //===----------------------------------------------------------------------===//

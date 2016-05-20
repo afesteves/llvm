@@ -62,7 +62,6 @@ P3TargetLowering::P3TargetLowering(const TargetMachine &TM,
     : TargetLowering(TM) {
 
   // Set up the register classes.
-  addRegisterClass(MVT::i8,  &P3::GR8RegClass);
   addRegisterClass(MVT::i16, &P3::GR16RegClass);
 
   // Compute derived properties from the register classes
@@ -225,9 +224,6 @@ P3TargetLowering::getRegForInlineAsmConstraint(
     switch (Constraint[0]) {
     default: break;
     case 'r':   // GENERAL_REGS
-      if (VT == MVT::i8)
-        return std::make_pair(0U, &P3::GR8RegClass);
-
       return std::make_pair(0U, &P3::GR16RegClass);
     }
   }
@@ -276,7 +272,7 @@ static void AnalyzeArguments(CCState &State,
                              SmallVectorImpl<CCValAssign> &ArgLocs,
                              const SmallVectorImpl<ArgT> &Args) {
   static const MCPhysReg RegList[] = {
-    P3::R15, P3::R14, P3::R13, P3::R12
+    P3::PC, P3::SP, P3::RD, P3::EA
   };
   static const unsigned NbRegs = array_lengthof(RegList);
 
@@ -960,15 +956,15 @@ SDValue P3TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDValue One  = DAG.getConstant(1, dl, VT);
   if (Convert) {
-    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, P3::SR,
+    SDValue RE = DAG.getCopyFromReg(DAG.getEntryNode(), dl, P3::RE,
                                     MVT::i16, Flag);
     if (Shift)
       // FIXME: somewhere this is turned into a SRL, lower it MSP specific?
-      SR = DAG.getNode(ISD::SRA, dl, MVT::i16, SR, One);
-    SR = DAG.getNode(ISD::AND, dl, MVT::i16, SR, One);
+      RE = DAG.getNode(ISD::SRA, dl, MVT::i16, RE, One);
+    RE = DAG.getNode(ISD::AND, dl, MVT::i16, RE, One);
     if (Invert)
-      SR = DAG.getNode(ISD::XOR, dl, MVT::i16, SR, One);
-    return SR;
+      RE = DAG.getNode(ISD::XOR, dl, MVT::i16, RE, One);
+    return RE;
   } else {
     SDValue Zero = DAG.getConstant(0, dl, VT);
     SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
@@ -1197,25 +1193,13 @@ P3TargetLowering::EmitShiftInstr(MachineInstr *MI,
   const TargetRegisterClass * RC;
   switch (MI->getOpcode()) {
   default: llvm_unreachable("Invalid shift opcode!");
-  case P3::Shl8:
-   Opc = P3::SHL8r1;
-   RC = &P3::GR8RegClass;
-   break;
   case P3::Shl16:
    Opc = P3::SHL16r1;
    RC = &P3::GR16RegClass;
    break;
-  case P3::Sra8:
-   Opc = P3::SAR8r1;
-   RC = &P3::GR8RegClass;
-   break;
   case P3::Sra16:
    Opc = P3::SAR16r1;
    RC = &P3::GR16RegClass;
-   break;
-  case P3::Srl8:
-   Opc = P3::SAR8r1c;
-   RC = &P3::GR8RegClass;
    break;
   case P3::Srl16:
    Opc = P3::SAR16r1c;
@@ -1245,19 +1229,14 @@ P3TargetLowering::EmitShiftInstr(MachineInstr *MI,
   LoopBB->addSuccessor(RemBB);
   LoopBB->addSuccessor(LoopBB);
 
-  unsigned ShiftAmtReg = RI.createVirtualRegister(&P3::GR8RegClass);
-  unsigned ShiftAmtReg2 = RI.createVirtualRegister(&P3::GR8RegClass);
   unsigned ShiftReg = RI.createVirtualRegister(RC);
   unsigned ShiftReg2 = RI.createVirtualRegister(RC);
-  unsigned ShiftAmtSrcReg = MI->getOperand(2).getReg();
   unsigned SrcReg = MI->getOperand(1).getReg();
   unsigned DstReg = MI->getOperand(0).getReg();
 
   // BB:
   // cmp 0, N
   // je RemBB
-  BuildMI(BB, dl, TII.get(P3::CMP8ri))
-    .addReg(ShiftAmtSrcReg).addImm(0);
   BuildMI(BB, dl, TII.get(P3::JCC))
     .addMBB(RemBB)
     .addImm(P3CC::COND_E);
@@ -1270,13 +1249,8 @@ P3TargetLowering::EmitShiftInstr(MachineInstr *MI,
   BuildMI(LoopBB, dl, TII.get(P3::PHI), ShiftReg)
     .addReg(SrcReg).addMBB(BB)
     .addReg(ShiftReg2).addMBB(LoopBB);
-  BuildMI(LoopBB, dl, TII.get(P3::PHI), ShiftAmtReg)
-    .addReg(ShiftAmtSrcReg).addMBB(BB)
-    .addReg(ShiftAmtReg2).addMBB(LoopBB);
   BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2)
     .addReg(ShiftReg);
-  BuildMI(LoopBB, dl, TII.get(P3::SUB8ri), ShiftAmtReg2)
-    .addReg(ShiftAmtReg).addImm(1);
   BuildMI(LoopBB, dl, TII.get(P3::JCC))
     .addMBB(LoopBB)
     .addImm(P3CC::COND_NE);
@@ -1296,15 +1270,15 @@ P3TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
                                                   MachineBasicBlock *BB) const {
   unsigned Opc = MI->getOpcode();
 
-  if (Opc == P3::Shl8 || Opc == P3::Shl16 ||
-      Opc == P3::Sra8 || Opc == P3::Sra16 ||
-      Opc == P3::Srl8 || Opc == P3::Srl16)
+  if (Opc == P3::Shl16 ||
+      Opc == P3::Sra16 ||
+      Opc == P3::Srl16)
     return EmitShiftInstr(MI, BB);
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc dl = MI->getDebugLoc();
 
-  assert((Opc == P3::Select16 || Opc == P3::Select8) &&
+  assert(Opc == P3::Select16 &&
          "Unexpected instr type to insert");
 
   // To "insert" a SELECT instruction, we actually have to insert the diamond
