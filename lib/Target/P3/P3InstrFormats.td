@@ -88,35 +88,6 @@ class IForm<bits<4> opcode, DestMode dest, bit bw, SourceMode src, SizeVal sz,
   let Inst{4-5}   = as.Value;
 }
 
-// 8 bit IForm instructions
-class IForm8<bits<4> opcode, DestMode dest, SourceMode src, SizeVal sz,
-             dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IForm<opcode, dest, 1, src, sz, outs, ins, asmstr, pattern>;
-
-class I8rr<bits<4> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IForm8<opcode, DstReg, SrcReg, Size2Bytes, outs, ins, asmstr, pattern>;
-
-class I8ri<bits<4> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IForm8<opcode, DstReg, SrcImm, Size4Bytes, outs, ins, asmstr, pattern>;
-
-class I8rm<bits<4> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IForm8<opcode, DstReg, SrcMem, Size4Bytes, outs, ins, asmstr, pattern>;
-
-class I8mr<bits<4> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IForm8<opcode, DstMem, SrcReg, Size4Bytes, outs, ins, asmstr, pattern>;
-
-class I8mi<bits<4> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IForm8<opcode, DstMem, SrcImm, Size6Bytes, outs, ins, asmstr, pattern>;
-
-class I8mm<bits<4> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IForm8<opcode, DstMem, SrcMem, Size6Bytes, outs, ins, asmstr, pattern>;
-
 // 16 bit IForm instructions
 class IForm16<bits<4> opcode, DestMode dest, SourceMode src, SizeVal sz,
               dag outs, dag ins, string asmstr, list<dag> pattern>
@@ -158,23 +129,6 @@ class IIForm<bits<9> opcode, bit bw, SourceMode src, SizeVal sz,
   let Inst{6}    = bw;
   let Inst{4-5}  = as.Value;
 }
-
-// 8 bit IIForm instructions
-class IIForm8<bits<9> opcode, SourceMode src, SizeVal sz,
-              dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IIForm<opcode, 1, src, sz, outs, ins, asmstr, pattern>;
-
-class II8r<bits<9> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IIForm8<opcode, SrcReg, Size2Bytes, outs, ins, asmstr, pattern>;
-
-class II8m<bits<9> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IIForm8<opcode, SrcMem, Size4Bytes, outs, ins, asmstr, pattern>;
-
-class II8i<bits<9> opcode,
-           dag outs, dag ins, string asmstr, list<dag> pattern>
-  : IIForm8<opcode, SrcImm, Size4Bytes, outs, ins, asmstr, pattern>;
 
 // 16 bit IIForm instructions
 class IIForm16<bits<9> opcode, SourceMode src, SizeVal sz,

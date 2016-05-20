@@ -16,7 +16,6 @@ include "P3InstrFormats.td"
 //===----------------------------------------------------------------------===//
 // Type Constraints.
 //===----------------------------------------------------------------------===//
-class SDTCisI8<int OpNum> : SDTCisVT<OpNum, i8>;
 class SDTCisI16<int OpNum> : SDTCisVT<OpNum, i16>;
 
 //===----------------------------------------------------------------------===//
@@ -361,7 +360,7 @@ def ADC16mi : I16mi<0x0,
                     [(store (adde (load addr:$dst), (i16 imm:$src)), addr:$dst),
                      (implicit RE)]>;
 
-def ADC16mm : I8mm<0x0,
+def ADC16mm : I16mm<0x0,
                    (outs), (ins memdst:$dst, memsrc:$src),
                    "addc.w\t{$src, $dst}",
                    [(store (adde (load addr:$dst), 
