@@ -87,12 +87,6 @@ P3TargetLowering::P3TargetLowering(const TargetMachine &TM,
   // We don't have any truncstores
   setTruncStoreAction(MVT::i16, MVT::i8, Expand);
 
-  setOperationAction(ISD::SRA,              MVT::i8,    Custom);
-  setOperationAction(ISD::SHL,              MVT::i8,    Custom);
-  setOperationAction(ISD::SRL,              MVT::i8,    Custom);
-  setOperationAction(ISD::SRA,              MVT::i16,   Custom);
-  setOperationAction(ISD::SHL,              MVT::i16,   Custom);
-  setOperationAction(ISD::SRL,              MVT::i16,   Custom);
   setOperationAction(ISD::ROTL,             MVT::i8,    Expand);
   setOperationAction(ISD::ROTR,             MVT::i8,    Expand);
   setOperationAction(ISD::ROTL,             MVT::i16,   Expand);
@@ -120,14 +114,16 @@ P3TargetLowering::P3TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ,             MVT::i16,   Expand);
   setOperationAction(ISD::CTPOP,            MVT::i8,    Expand);
   setOperationAction(ISD::CTPOP,            MVT::i16,   Expand);
-
+  
+  setOperationAction(ISD::SHL_PARTS,        MVT::i16,   Expand);
+  /*
   setOperationAction(ISD::SHL_PARTS,        MVT::i8,    Expand);
   setOperationAction(ISD::SHL_PARTS,        MVT::i16,   Expand);
   setOperationAction(ISD::SRL_PARTS,        MVT::i8,    Expand);
   setOperationAction(ISD::SRL_PARTS,        MVT::i16,   Expand);
   setOperationAction(ISD::SRA_PARTS,        MVT::i8,    Expand);
   setOperationAction(ISD::SRA_PARTS,        MVT::i16,   Expand);
-
+  */
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1,   Expand);
 
   // FIXME: Implement efficiently multiplication by a constant
@@ -178,9 +174,6 @@ P3TargetLowering::P3TargetLowering(const TargetMachine &TM,
 SDValue P3TargetLowering::LowerOperation(SDValue Op,
                                              SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  case ISD::SHL: // FALLTHROUGH
-  case ISD::SRL:
-  case ISD::SRA:              return LowerShifts(Op, DAG);
   case ISD::GlobalAddress:    return LowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:     return LowerBlockAddress(Op, DAG);
   case ISD::ExternalSymbol:   return LowerExternalSymbol(Op, DAG);
@@ -725,49 +718,6 @@ P3TargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
   return Chain;
 }
 
-SDValue P3TargetLowering::LowerShifts(SDValue Op,
-                                          SelectionDAG &DAG) const {
-  unsigned Opc = Op.getOpcode();
-  SDNode* N = Op.getNode();
-  EVT VT = Op.getValueType();
-  SDLoc dl(N);
-
-  // Expand non-constant shifts to loops:
-  if (!isa<ConstantSDNode>(N->getOperand(1)))
-    switch (Opc) {
-    default: llvm_unreachable("Invalid shift opcode!");
-    case ISD::SHL:
-      return DAG.getNode(P3ISD::SHL, dl,
-                         VT, N->getOperand(0), N->getOperand(1));
-    case ISD::SRA:
-      return DAG.getNode(P3ISD::SRA, dl,
-                         VT, N->getOperand(0), N->getOperand(1));
-    case ISD::SRL:
-      return DAG.getNode(P3ISD::SRL, dl,
-                         VT, N->getOperand(0), N->getOperand(1));
-    }
-
-  uint64_t ShiftAmount = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-
-  // Expand the stuff into sequence of shifts.
-  // FIXME: for some shift amounts this might be done better!
-  // E.g.: foo >> (8 + N) => sxt(swpb(foo)) >> N
-  SDValue Victim = N->getOperand(0);
-
-  if (Opc == ISD::SRL && ShiftAmount) {
-    // Emit a special goodness here:
-    // srl A, 1 => clrc; rrc A
-    Victim = DAG.getNode(P3ISD::RRC, dl, VT, Victim);
-    ShiftAmount -= 1;
-  }
-
-  while (ShiftAmount--)
-    Victim = DAG.getNode((Opc == ISD::SHL ? P3ISD::RLA : P3ISD::RRA),
-                         dl, VT, Victim);
-
-  return Victim;
-}
-
 SDValue P3TargetLowering::LowerGlobalAddress(SDValue Op,
                                                  SelectionDAG &DAG) const {
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
@@ -1141,9 +1091,6 @@ const char *P3TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case P3ISD::CMP:                return "P3ISD::CMP";
   case P3ISD::SETCC:              return "P3ISD::SETCC";
   case P3ISD::SELECT_CC:          return "P3ISD::SELECT_CC";
-  case P3ISD::SHL:                return "P3ISD::SHL";
-  case P3ISD::SRA:                return "P3ISD::SRA";
-  case P3ISD::SRL:                return "P3ISD::SRL";
   }
   return nullptr;
 }
@@ -1182,98 +1129,9 @@ bool P3TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
 //===----------------------------------------------------------------------===//
 
 MachineBasicBlock*
-P3TargetLowering::EmitShiftInstr(MachineInstr *MI,
-                                     MachineBasicBlock *BB) const {
-  MachineFunction *F = BB->getParent();
-  MachineRegisterInfo &RI = F->getRegInfo();
-  DebugLoc dl = MI->getDebugLoc();
-  const TargetInstrInfo &TII = *F->getSubtarget().getInstrInfo();
-
-  unsigned Opc;
-  const TargetRegisterClass * RC;
-  switch (MI->getOpcode()) {
-  default: llvm_unreachable("Invalid shift opcode!");
-  case P3::Shl16:
-   Opc = P3::SHL16r1;
-   RC = &P3::GR16RegClass;
-   break;
-  case P3::Sra16:
-   Opc = P3::SAR16r1;
-   RC = &P3::GR16RegClass;
-   break;
-  case P3::Srl16:
-   Opc = P3::SAR16r1c;
-   RC = &P3::GR16RegClass;
-   break;
-  }
-
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
-  MachineFunction::iterator I = ++BB->getIterator();
-
-  // Create loop block
-  MachineBasicBlock *LoopBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *RemBB  = F->CreateMachineBasicBlock(LLVM_BB);
-
-  F->insert(I, LoopBB);
-  F->insert(I, RemBB);
-
-  // Update machine-CFG edges by transferring all successors of the current
-  // block to the block containing instructions after shift.
-  RemBB->splice(RemBB->begin(), BB, std::next(MachineBasicBlock::iterator(MI)),
-                BB->end());
-  RemBB->transferSuccessorsAndUpdatePHIs(BB);
-
-  // Add adges BB => LoopBB => RemBB, BB => RemBB, LoopBB => LoopBB
-  BB->addSuccessor(LoopBB);
-  BB->addSuccessor(RemBB);
-  LoopBB->addSuccessor(RemBB);
-  LoopBB->addSuccessor(LoopBB);
-
-  unsigned ShiftReg = RI.createVirtualRegister(RC);
-  unsigned ShiftReg2 = RI.createVirtualRegister(RC);
-  unsigned SrcReg = MI->getOperand(1).getReg();
-  unsigned DstReg = MI->getOperand(0).getReg();
-
-  // BB:
-  // cmp 0, N
-  // je RemBB
-  BuildMI(BB, dl, TII.get(P3::JCC))
-    .addMBB(RemBB)
-    .addImm(P3CC::COND_E);
-
-  // LoopBB:
-  // ShiftReg = phi [%SrcReg, BB], [%ShiftReg2, LoopBB]
-  // ShiftAmt = phi [%N, BB],      [%ShiftAmt2, LoopBB]
-  // ShiftReg2 = shift ShiftReg
-  // ShiftAmt2 = ShiftAmt - 1;
-  BuildMI(LoopBB, dl, TII.get(P3::PHI), ShiftReg)
-    .addReg(SrcReg).addMBB(BB)
-    .addReg(ShiftReg2).addMBB(LoopBB);
-  BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2)
-    .addReg(ShiftReg);
-  BuildMI(LoopBB, dl, TII.get(P3::JCC))
-    .addMBB(LoopBB)
-    .addImm(P3CC::COND_NE);
-
-  // RemBB:
-  // DestReg = phi [%SrcReg, BB], [%ShiftReg, LoopBB]
-  BuildMI(*RemBB, RemBB->begin(), dl, TII.get(P3::PHI), DstReg)
-    .addReg(SrcReg).addMBB(BB)
-    .addReg(ShiftReg2).addMBB(LoopBB);
-
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
-  return RemBB;
-}
-
-MachineBasicBlock*
 P3TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
                                                   MachineBasicBlock *BB) const {
   unsigned Opc = MI->getOpcode();
-
-  if (Opc == P3::Shl16 ||
-      Opc == P3::Sra16 ||
-      Opc == P3::Srl16)
-    return EmitShiftInstr(MI, BB);
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc dl = MI->getDebugLoc();

@@ -304,11 +304,7 @@ unsigned P3InstrInfo::GetInstSizeInBytes(const MachineInstr *MI) const {
     }
     }
   case P3II::SizeSpecial:
-    switch (MI->getOpcode()) {
-    default: llvm_unreachable("Unknown instruction size!");
-    case P3::SAR16r1c:
-      return 4;
-    }
+    llvm_unreachable("Unknown instruction size!");
   case P3II::Size2Bytes:
     return 2;
   case P3II::Size4Bytes:

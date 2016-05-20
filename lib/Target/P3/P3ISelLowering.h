@@ -60,9 +60,6 @@ namespace llvm {
       /// SELECT_CC - Operand 0 and operand 1 are selection variable, operand 3
       /// is condition code and operand 4 is flag operand.
       SELECT_CC,
-
-      /// SHL, SRA, SRL - Non-constant shifts.
-      SHL, SRA, SRL
     };
   }
 
@@ -71,11 +68,11 @@ namespace llvm {
   public:
     explicit P3TargetLowering(const TargetMachine &TM,
                                   const P3Subtarget &STI);
-
+    /*    
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
-      return MVT::i8;
+      return MVT::i16;
     }
-
+    */
     /// LowerOperation - Provide custom lowering hooks for some operations.
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
@@ -83,7 +80,6 @@ namespace llvm {
     /// DAG node.
     const char *getTargetNodeName(unsigned Opcode) const override;
 
-    SDValue LowerShifts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;

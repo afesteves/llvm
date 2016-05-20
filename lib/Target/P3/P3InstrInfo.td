@@ -61,10 +61,6 @@ def P3brcc    : SDNode<"P3ISD::BR_CC", SDT_P3BrCC,
                             [SDNPHasChain, SDNPInGlue]>;
 def P3selectcc: SDNode<"P3ISD::SELECT_CC", SDT_P3SelectCC,
                             [SDNPInGlue]>;
-def P3shl     : SDNode<"P3ISD::SHL", SDT_P3Shift, []>;
-def P3sra     : SDNode<"P3ISD::SRA", SDT_P3Shift, []>;
-def P3srl     : SDNode<"P3ISD::SRL", SDT_P3Shift, []>;
-
 //===----------------------------------------------------------------------===//
 // P3 Operand Definitions.
 //===----------------------------------------------------------------------===//
@@ -125,18 +121,6 @@ let usesCustomInserter = 1 in {
                         "# Select16 PSEUDO",
                         [(set GR16:$dst,
                           (P3selectcc GR16:$src, GR16:$src2, imm:$cc))]>;
-  let Defs = [RE] in {
-  def Shl16    : Pseudo<(outs GR16:$dst), (ins GR16:$src, GR16:$cnt),
-                        "# Shl16 PSEUDO",
-                        [(set GR16:$dst, (P3shl GR16:$src, GR16:$cnt))]>;
-  def Sra16    : Pseudo<(outs GR16:$dst), (ins GR16:$src, GR16:$cnt),
-                        "# Sra16 PSEUDO",
-                        [(set GR16:$dst, (P3sra GR16:$src, GR16:$cnt))]>;
-  def Srl16    : Pseudo<(outs GR16:$dst), (ins GR16:$src, GR16:$cnt),
-                        "# Srl16 PSEUDO",
-                        [(set GR16:$dst, (P3srl GR16:$src, GR16:$cnt))]>;
-
-  }
 }
 
 let hasSideEffects = 0 in
@@ -270,6 +254,18 @@ def MOV16mm : I16mm<0x0,
 //===----------------------------------------------------------------------===//
 // Arithmetic Instructions
 
+multiclass ALU1i <bits<4> opcode, string mnemonic, SDPatternOperator node> {
+let Constraints = "$src = $dst" in {
+let Defs = [RE] in {
+
+def 16r1 : I16rr<opcode,
+                    (outs GR16:$dst), (ins GR16:$src, i16imm:$src2),
+                    mnemonic # "\t{$src2, $dst}",
+                    [(set GR16:$dst, (node GR16:$src, i16:$src2)),
+                     (implicit RE)]>;
+}
+}
+}
 
 multiclass ALU2 <bits<4> opcode, string mnemonic, SDPatternOperator node, bit commutable, list<P3Reg> usedRegs> {
 
@@ -317,6 +313,10 @@ multiclass Arithmetic2 <bits<4> opcode, string mnemonic, SDPatternOperator node,
  defm : ALU2 <opcode, mnemonic, node, commutable, !if(carry, [RE], [])>;
 }
 
+defm SHR : ALU1i <0x0, "SHR",  srl>;
+defm SHL : ALU1i <0x0, "SHL",  shl>;
+defm SHRA: ALU1i <0x0, "SHRA", sra>;
+defm SHLA: ALU1i <0x0, "SHLA", shl>;
 
 defm AND: Bitwise2 <0x0, "AND", and>;
 defm  OR: Bitwise2 <0x0,  "OR",  or>;
@@ -356,24 +356,6 @@ def BIC16mm : I16mm<0x0,
                                  (not (i16 (load addr:$src)))), addr:$dst)]>;
 }
 
-// FIXME: memory variant!
-def SAR16r1 : II16r<0x0,
-                    (outs GR16:$dst), (ins GR16:$src),
-                    "rra.w\t$dst",
-                    [(set GR16:$dst, (P3rra GR16:$src)),
-                     (implicit RE)]>;
-
-def SHL16r1 : I16rr<0x0,
-                    (outs GR16:$dst), (ins GR16:$src),
-                    "rla.w\t$dst",
-                    [(set GR16:$dst, (P3rla GR16:$src)),
-                     (implicit RE)]>;
-
-def SAR16r1c : Pseudo<(outs GR16:$dst), (ins GR16:$src),
-                      "clrc\n\t"
-                      "rrc.w\t$dst",
-                      [(set GR16:$dst, (P3rrc GR16:$src)),
-                       (implicit RE)]>;
 } // Defs = [SR]
 
 // FIXME: Memory bitswaps?
