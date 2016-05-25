@@ -24,4 +24,5 @@ P3MCAsmInfo::P3MCAsmInfo(const Triple &TT) {
   AlignmentIsInBytes = false;
   UsesELFSectionDirectiveForBSS = true;
   HasDotTypeDotSizeDirective = false;
+  HasSingleParameterDotFile = false;
 }
