@@ -45,7 +45,11 @@ namespace {
     const char *getPassName() const override {
       return "P3 Assembly Printer";
     }
-
+    
+    void EmitFunctionHeader() override {
+      EmitFunctionEntryLabel();
+    }
+    
     void printOperand(const MachineInstr *MI, int OpNum,
                       raw_ostream &O, const char* Modifier = nullptr);
     void printSrcMemOperand(const MachineInstr *MI, int OpNum,
