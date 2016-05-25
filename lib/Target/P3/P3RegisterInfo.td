@@ -20,14 +20,14 @@ class P3Reg<bits<4> num, string n> : Register<n> {
 //  Registers
 //===----------------------------------------------------------------------===//
 
-def R0  : P3Reg<0,  "r0">;
-def R1  : P3Reg<1,  "r1">;
-def R2  : P3Reg<2,  "r2">;
-def R3  : P3Reg<3,  "r3">;
-def R4  : P3Reg<4,  "r4">;
-def R5  : P3Reg<5,  "r5">;
-def R6  : P3Reg<6,  "r6">;
-def R7  : P3Reg<7,  "r7">;
+def R0  : P3Reg<0,  "R0">;
+def R1  : P3Reg<1,  "R1">;
+def R2  : P3Reg<2,  "R2">;
+def R3  : P3Reg<3,  "R3">;
+def R4  : P3Reg<4,  "R4">;
+def R5  : P3Reg<5,  "R5">;
+def R6  : P3Reg<6,  "R6">;
+def R7  : P3Reg<7,  "R7">;
 
 def RE  : P3Reg<8,  "RE">;
 def R9  : P3Reg<9,  "R9">;
