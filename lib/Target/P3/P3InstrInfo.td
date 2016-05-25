@@ -211,7 +211,7 @@ def PUSH16r  : II16r<0x0,
 let hasSideEffects = 0 in {
 def MOV16rr : I16rr<0x0,
                     (outs GR16:$dst), (ins GR16:$src),
-                    "mov.w\t{$src, $dst}",
+                    "MOV\t{$src, $dst}",
                     []>;
 }
 
@@ -219,37 +219,21 @@ def MOV16rr : I16rr<0x0,
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def MOV16ri : I16ri<0x0,
                     (outs GR16:$dst), (ins i16imm:$src),
-                    "mov.w\t{$src, $dst}",
+                    "MOV\t{$src, $dst}",
                     [(set GR16:$dst, imm:$src)]>;
 }
 
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
 def MOV16rm : I16rm<0x0,
                     (outs GR16:$dst), (ins memsrc:$src),
-                    "mov.w\t{$src, $dst}",
+                    "MOV\t{$src, $dst}",
                     [(set GR16:$dst, (load addr:$src))]>;
 }
 
-let mayLoad = 1, hasExtraDefRegAllocReq = 1, Constraints = "$base = $base_wb" in {
-def MOV16rm_POST : IForm16<0x0, DstReg, SrcPostInc, Size2Bytes,
-                           (outs GR16:$dst, GR16:$base_wb), (ins GR16:$base),
-                           "mov.w\t{@$base+, $dst}", []>;
-}
-
-def MOV16mi : I16mi<0x0,
-                    (outs), (ins memdst:$dst, i16imm:$src),
-                    "mov.w\t{$src, $dst}",
-                    [(store (i16 imm:$src), addr:$dst)]>;
-
 def MOV16mr : I16mr<0x0,
                     (outs), (ins memdst:$dst, GR16:$src),
-                    "mov.w\t{$src, $dst}",
+                    "MOV\t{$src, $dst}",
                     [(store GR16:$src, addr:$dst)]>;
-
-def MOV16mm : I16mm<0x0,
-                    (outs), (ins memdst:$dst, memsrc:$src),
-                    "mov.w\t{$src, $dst}",
-                    [(store (i16 (load addr:$src)), addr:$dst)]>;
 
 //===----------------------------------------------------------------------===//
 // Arithmetic Instructions
@@ -453,13 +437,6 @@ def : Pat<(add GR16:$src, (P3Wrapper texternalsym:$src2)),
           (ADD16ri GR16:$src, texternalsym:$src2)>;
 def : Pat<(add GR16:$src, (P3Wrapper tblockaddress:$src2)),
           (ADD16ri GR16:$src, tblockaddress:$src2)>;
-
-def : Pat<(store (i16 (P3Wrapper tglobaladdr:$src)), addr:$dst),
-          (MOV16mi addr:$dst, tglobaladdr:$src)>;
-def : Pat<(store (i16 (P3Wrapper texternalsym:$src)), addr:$dst),
-          (MOV16mi addr:$dst, texternalsym:$src)>;
-def : Pat<(store (i16 (P3Wrapper tblockaddress:$src)), addr:$dst),
-          (MOV16mi addr:$dst, tblockaddress:$src)>;
 
 // calls
 def : Pat<(P3call (i16 tglobaladdr:$dst)),

@@ -333,7 +333,7 @@ bool P3DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   unsigned Opcode = 0;
   switch (VT.SimpleTy) {
   case MVT::i16:
-    Opcode = P3::MOV16rm_POST;
+    Opcode = P3::MOV16rm;
     break;
   default:
     return false;
