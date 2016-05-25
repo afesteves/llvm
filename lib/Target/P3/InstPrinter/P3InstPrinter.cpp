@@ -63,28 +63,19 @@ void P3InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
                                            const char *Modifier) {
   const MCOperand &Base = MI->getOperand(OpNo);
   const MCOperand &Disp = MI->getOperand(OpNo+1);
-
-  // Print displacement first
-
-  // If the global address expression is a part of displacement field with a
-  // register base, we should not emit any prefix symbol here, e.g.
-  //   mov.w &foo, r1
-  // vs
-  //   mov.w glb(r1), r2
-  // Otherwise (!) p3-as will silently miscompile the output :(
-  if (!Base.getReg())
-    O << '&';
-
-  if (Disp.isExpr())
-    Disp.getExpr()->print(O, &MAI);
-  else {
-    assert(Disp.isImm() && "Expected immediate in displacement field");
-    O << Disp.getImm();
+  
+  O << "M[" ;
+  if(Base.getReg()) {
+    O << getRegisterName(Base.getReg());
+    int64_t imm = Disp.getImm();
+    if(imm > 0)
+      O << '+';
+    O << imm;
   }
-
-  // Print register base field
-  if (Base.getReg())
-    O << '(' << getRegisterName(Base.getReg()) << ')';
+  else
+    O << Disp.getImm();
+  
+  O << ']';
 }
 
 void P3InstPrinter::printCCOperand(const MCInst *MI, unsigned OpNo,
