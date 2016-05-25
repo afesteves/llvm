@@ -46,6 +46,8 @@ namespace {
       return "P3 Assembly Printer";
     }
     
+    bool doFinalization(Module &M) override { return false; }
+
     void EmitFunctionHeader() override {
       EmitFunctionEntryLabel();
     }
